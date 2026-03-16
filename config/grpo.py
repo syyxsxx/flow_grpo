@@ -160,6 +160,48 @@ def geneval_sd3():
     config.per_prompt_stat_tracking = True
     return config
 
+def geneval_sd3_fast_nocfg():
+    gpu_number = 32
+    config = compressibility()
+    config.dataset = os.path.join(os.getcwd(), "dataset/geneval")
+
+    # sd3.5 medium
+    config.pretrained.model = "stabilityai/stable-diffusion-3.5-medium"
+    config.sample.num_steps = 10
+    config.sample.eval_num_steps = 40
+    config.sample.guidance_scale = 1
+    config.sample.eval_guidance_scale = 1
+    config.train.cfg = False
+
+    config.resolution = 512
+    config.sample.train_batch_size = 9
+    config.sample.num_image_per_prompt = 24
+    config.sample.num_batches_per_epoch = int(48/(gpu_number*config.sample.train_batch_size/config.sample.num_image_per_prompt))
+    config.sample.test_batch_size = 14 # This bs is a special design, the test set has a total of 2212, to make gpu_num*bs*n as close as possible to 2212, because when the number of samples cannot be divided evenly by the number of cards, multi-card will fill the last batch to ensure each card has the same number of samples, affecting gradient synchronization.
+
+    config.train.batch_size = config.sample.train_batch_size
+    config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch//2
+    config.train.num_inner_epochs = 1
+    config.train.clip_range = 1e-5
+    config.train.beta = 0
+    config.sample.global_std = True
+    config.sample.noise_level = 0.8
+    config.sample.sde_window_size = 3
+    config.sample.sde_window_range = (0, config.sample.num_steps//2)
+    config.sample.sde_type = "cps"
+    config.train.ema = True
+    config.save_freq = 60 # epoch
+    config.eval_freq = 60
+    config.save_dir = 'logs/geneval/sd3.5-M-fast-nocfg'
+    config.reward_fn = {
+        "geneval": 1.0,
+    }
+    
+    config.prompt_fn = "geneval"
+
+    config.per_prompt_stat_tracking = True
+    return config
+
 def pickscore_sd3():
     gpu_number=32
     config = compressibility()
@@ -277,6 +319,48 @@ def pickscore_sd3_fast():
     config.per_prompt_stat_tracking = True
     return config
 
+
+def pickscore_sd3_fast_nocfg():
+    gpu_number = 32
+    config = compressibility()
+    config.dataset = os.path.join(os.getcwd(), "dataset/pickscore")
+
+    # sd3.5 medium
+    config.pretrained.model = "stabilityai/stable-diffusion-3.5-medium"
+    config.sample.num_steps = 10
+    config.sample.eval_num_steps = 40
+    config.sample.guidance_scale = 1
+    config.sample.eval_guidance_scale = 1
+    config.train.cfg = False
+
+    config.resolution = 512
+    config.sample.train_batch_size = 9
+    config.sample.num_image_per_prompt = 18
+    config.sample.num_batches_per_epoch = int(64/(gpu_number*config.sample.train_batch_size/config.sample.num_image_per_prompt))
+    config.sample.test_batch_size = 16 # This bs is a special design, the test set has a total of 2212, to make gpu_num*bs*n as close as possible to 2212, because when the number of samples cannot be divided evenly by the number of cards, multi-card will fill the last batch to ensure each card has the same number of samples, affecting gradient synchronization.
+
+    config.train.batch_size = config.sample.train_batch_size
+    config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch//2
+    config.train.num_inner_epochs = 1
+    config.train.clip_range = 1e-5
+    config.train.beta = 0
+    config.sample.global_std = True
+    config.sample.noise_level = 0.8
+    config.sample.sde_window_size = 3
+    config.sample.sde_window_range = (0, config.sample.num_steps//2)
+    config.sample.sde_type = "cps"
+    config.train.ema = True
+    config.save_freq = 60 # epoch
+    config.eval_freq = 60
+    config.save_dir = 'logs/geneval/sd3.5-M-fast-nocfg'
+    config.reward_fn = {
+        "pickscore": 1.0,
+    }
+    
+    config.prompt_fn = "general_ocr"
+
+    config.per_prompt_stat_tracking = True
+    return config
 
 def general_ocr_sd3_4gpu():
     gpu_number = 4
@@ -468,6 +552,95 @@ def pickscore_flux_8gpu():
     config.save_freq = 30 # epoch
     config.eval_freq = 30
     config.save_dir = 'logs/pickscore/flux-group24-8gpu'
+    config.reward_fn = {
+        "pickscore": 1.0,
+    }
+    
+    config.prompt_fn = "general_ocr"
+
+    config.per_prompt_stat_tracking = True
+    return config
+
+
+def geneval_flux_fast():
+    gpu_number = 32
+    config = compressibility()
+    config.dataset = os.path.join(os.getcwd(), "dataset/geneval")
+
+    config.pretrained.model = "black-forest-labs/FLUX.1-dev"
+    config.sample.num_steps = 6
+    config.sample.eval_num_steps = 28
+    config.sample.guidance_scale = 3.5
+    config.sample.eval_guidance_scale = 3.5
+
+    config.resolution = 512
+    config.sample.train_batch_size = 3
+    config.sample.num_image_per_prompt = 24
+    config.sample.num_batches_per_epoch = int(48/(gpu_number*config.sample.train_batch_size/config.sample.num_image_per_prompt))
+    assert config.sample.num_batches_per_epoch % 2 == 0, "Please set config.sample.num_batches_per_epoch to an even number! This ensures that config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch / 2, so that gradients are updated twice per epoch."
+    config.sample.test_batch_size = 14 # This bs is a special design, the test set has a total of 2212, to make gpu_num*bs*n as close as possible to 2212, because when the number of samples cannot be divided evenly by the number of cards, multi-card will fill the last batch to ensure each card has the same number of samples, affecting gradient synchronization.
+
+    config.train.batch_size = config.sample.train_batch_size
+    config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch//2
+    config.train.num_inner_epochs = 1
+    config.train.clip_range = 1e-5
+    config.train.beta = 0
+    config.sample.global_std = True
+    config.sample.same_latent = False
+    config.sample.noise_level = 0.8
+    config.sample.sde_window_size = 3
+    config.sample.sde_window_range = (0, config.sample.num_steps//2)
+    config.sample.sde_type = "cps"
+    config.train.ema = True
+    config.mixed_precision = "bf16"
+    config.save_freq = 30 # epoch
+    config.eval_freq = 30
+    config.save_dir = 'logs/geneval/flux_fast'
+    config.reward_fn = {
+        "geneval": 1.0,
+    }
+    
+    config.prompt_fn = "geneval"
+
+    config.per_prompt_stat_tracking = True
+    return config
+
+
+def pickscore_flux_fast():
+    gpu_number=32
+    config = compressibility()
+    config.dataset = os.path.join(os.getcwd(), "dataset/pickscore")
+
+    # flux
+    config.pretrained.model = "black-forest-labs/FLUX.1-dev"
+    config.sample.num_steps = 6
+    config.sample.eval_num_steps = 28
+    config.sample.guidance_scale = 3.5
+    config.sample.eval_guidance_scale = 3.5
+
+    config.resolution = 512
+    config.sample.train_batch_size = 3
+    config.sample.num_image_per_prompt = 24
+    config.sample.num_batches_per_epoch = int(48/(gpu_number*config.sample.train_batch_size/config.sample.num_image_per_prompt))
+    assert config.sample.num_batches_per_epoch % 2 == 0, "Please set config.sample.num_batches_per_epoch to an even number! This ensures that config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch / 2, so that gradients are updated twice per epoch."
+    config.sample.test_batch_size = 16 # This bs is a special design, the test set has a total of 2048, to make gpu_num*bs*n as close as possible to 2048, because when the number of samples cannot be divided evenly by the number of cards, multi-card will fill the last batch to ensure each card has the same number of samples, affecting gradient synchronization.
+
+    config.train.batch_size = config.sample.train_batch_size
+    config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch//2
+    config.train.num_inner_epochs = 1
+    config.train.clip_range = 1e-5
+    config.train.beta = 0
+    config.sample.global_std = False
+    config.sample.same_latent = False
+    config.sample.noise_level = 0.8
+    config.sample.sde_window_size = 3
+    config.sample.sde_window_range = (0, config.sample.num_steps//2)
+    config.sample.sde_type = "cps"
+    config.train.ema = True
+    config.mixed_precision = "bf16"
+    config.save_freq = 30 # epoch
+    config.eval_freq = 30
+    config.save_dir = 'logs/pickscore/flux-fast'
     config.reward_fn = {
         "pickscore": 1.0,
     }
@@ -731,6 +904,116 @@ def counting_qwenimage_edit_8gpu():
     }
     config.per_prompt_stat_tracking = True
     return config
+
+def pickscore_bagel():
+    gpu_number = 32
+    config = compressibility()
+    config.dataset = os.path.join(os.getcwd(), "dataset/pickscore")
+
+    # sd3.5 medium
+    config.run_name = "[bagel-pickscore-full]-32gpu"
+    config.pretrained.model = "ByteDance-Seed/BAGEL-7B-MoT"
+    config.sample.num_steps = 15
+    config.sample.eval_num_steps = 50
+    config.sample.guidance_scale = 4.0
+    config.sample.eval_guidance_scale = 4.0
+    config.train.cfg = True     # No effect for BAGEL, always use cfg in code.
+    config.train.ema = False
+    config.use_lora = False
+
+    config.resolution = 512
+    config.sample.train_batch_size = 6
+    config.sample.num_image_per_prompt = 16
+    config.sample.num_batches_per_epoch = int(48/(gpu_number*config.sample.train_batch_size/config.sample.num_image_per_prompt))    # =2 for 32 gpus
+    config.sample.test_batch_size = 1 
+
+    config.train.batch_size = config.sample.train_batch_size
+    config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch//2
+
+    config.train.num_inner_epochs = 1
+    config.train.clip_range_lt = 1e-5
+    config.train.clip_range_gt = 1e-5
+    config.train.beta = 0
+    config.train.learning_rate = 1e-4
+    config.mixed_precision = "bf16"
+
+    config.sample.same_latent = False
+    config.sample.global_std = False
+    config.sample.noise_level = 1.3
+
+    config.sample.sde_window_size = 3
+    config.sample.sde_window_range = (0, config.sample.num_steps//2)
+
+    config.save_freq = 30 # epoch
+    config.eval_freq = 30
+    config.save_dir = 'logs/pickscore/bagel'
+    config.reward_fn = {
+        "pickscore": 1.0,
+    }
+    
+    config.prompt_fn = "general_ocr"
+
+    config.per_prompt_stat_tracking = True
+
+    config.activation_checkpointing = True
+    config.fsdp_optimizer_offload = True
+    return config
+
+
+def pickscore_bagel_lora():
+    gpu_number = 8
+    config = compressibility()
+    config.dataset = os.path.join(os.getcwd(), "dataset/pickscore")
+
+    # sd3.5 medium
+    config.run_name = "[bagel-pickscore-lora]-8gpu"
+    config.pretrained.model = "ByteDance-Seed/BAGEL-7B-MoT"
+    config.sample.num_steps = 15
+    config.sample.eval_num_steps = 50
+    config.sample.guidance_scale = 4.0
+    config.sample.eval_guidance_scale = 4.0
+    config.train.cfg = True     # No effect for BAGEL, always use cfg in code.
+    config.train.ema = False
+    config.use_lora = True
+
+    config.resolution = 512
+    config.sample.train_batch_size = 6
+    config.sample.num_image_per_prompt = 16
+    config.sample.num_batches_per_epoch = int(48/(gpu_number*config.sample.train_batch_size/config.sample.num_image_per_prompt))    # =2 for 32 gpus
+    config.sample.test_batch_size = 1 
+
+    config.train.batch_size = config.sample.train_batch_size
+    config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch//2
+
+    config.train.num_inner_epochs = 1
+    config.train.clip_range_lt = 1e-5
+    config.train.clip_range_gt = 1e-5
+    config.train.beta = 0
+    config.train.learning_rate = 1e-4
+    config.mixed_precision = "bf16"
+
+    config.sample.same_latent = False
+    config.sample.global_std = False
+    config.sample.noise_level = 1.3
+
+    config.sample.sde_window_size = 2
+    config.sample.sde_window_range = (0, config.sample.num_steps//2)
+
+    config.save_freq = 30 # epoch
+    config.eval_freq = 30
+    config.save_dir = 'logs/pickscore/bagel'
+    config.reward_fn = {
+        "pickscore": 1.0,
+    }
+    
+    config.prompt_fn = "general_ocr"
+
+    config.per_prompt_stat_tracking = True
+
+    config.activation_checkpointing = True
+    config.fsdp_optimizer_offload = True
+    return config
+
 
 def get_config(name):
     return globals()[name]()

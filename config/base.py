@@ -7,6 +7,9 @@ def get_config():
     ###### General ######
     # run name for wandb logging and checkpoint saving -- if not provided, will be auto-generated based on the datetime.
     config.run_name = ""
+    config.debug = False
+    config.num_epochs = 100000
+    config.resume_from = None
     # random seed for reproducibility.
     config.seed = 42
     # top-level logging directory for checkpoint saving.
@@ -43,6 +46,8 @@ def get_config():
     sample.eval_num_steps = 40
     # classifier-free guidance weight. 1.0 is no guidance.
     sample.guidance_scale = 4.5
+    # classifier-free guidance weight for evaluation. 1.0 is no guidance.
+    sample.eval_guidance_scale = 4.5
     # batch size (per GPU!) to use for sampling.
     sample.train_batch_size = 1
     sample.num_image_per_prompt = 1
@@ -92,6 +97,9 @@ def get_config():
     train.adv_clip_max = 5
     # the PPO clip range.
     train.clip_range = 1e-4
+    train.clip_range_lt = 1e-4
+    train.clip_range_gt = 1e-4
+    train.timestep_shift = 3.0  # for bagel
     # the fraction of timesteps to train on. if set to less than 1.0, the model will be trained on a subset of the
     # timesteps for each sample. this will speed up training but reduce the accuracy of policy gradient estimates.
     train.timestep_fraction = 1.0
